@@ -814,3 +814,113 @@ mod accounting_symbol_tests {
         }
     }
 }
+
+/// Personal stripped-down Home row: file, undo, font, size, bold/italic/underline, alignment.
+pub(super) fn simple(app: &mut SheetApp, ui: &mut Ui) {
+    let st = active_style(app);
+    if big_button(ui, Icon::OpenFolder, "Open", "Open", false).clicked() {
+        act(app, "file.open", json!({}));
+    }
+    if big_button(ui, Icon::Save, "Save", "Save", false).clicked() {
+        act(app, "file.save", json!({}));
+    }
+    if big_button(ui, Icon::Print, "Print", "Print", false).clicked() {
+        app.print_now(json!({}));
+    }
+    sep(ui);
+    if big_button(ui, Icon::Undo, "Undo", "Undo", false).clicked() {
+        act(app, "edit.undo", json!({}));
+    }
+    if big_button(ui, Icon::Redo, "Redo", "Redo", false).clicked() {
+        act(app, "edit.redo", json!({}));
+    }
+    sep(ui);
+    ui.vertical(|ui| {
+        ui.horizontal(|ui| {
+            font_combo(app, ui, &st);
+            size_combo(app, ui, &st);
+        });
+        ui.horizontal(|ui| {
+            for (icon, on, id, tip) in [
+                (Icon::Bold, st.font.bold, "home.bold", "Bold"),
+                (Icon::Italic, st.font.italic, "home.italic", "Italic"),
+                (Icon::Underline, false, "home.underline", "Underline"),
+            ] {
+                if toggle_button(ui, icon, on, tip).clicked() {
+                    act(app, id, json!({}));
+                }
+            }
+        });
+    });
+    sep(ui);
+    ui.vertical(|ui| {
+        ui.add_space(27.0);
+        ui.horizontal(|ui| {
+            for (icon, h, id, tip) in [
+                (Icon::AlignLeft, HAlign::Left, "home.alignLeft", "Align Left"),
+                (Icon::AlignCenter, HAlign::Center, "home.alignCenter", "Center"),
+                (Icon::AlignRight, HAlign::Right, "home.alignRight", "Align Right"),
+            ] {
+                if toggle_button(ui, icon, st.align.h == h, tip).clicked() {
+                    act(app, id, json!({}));
+                }
+            }
+        });
+    });
+}
+
+/// Phone layout: one row of small buttons that scrolls sideways.
+pub(super) fn compact(app: &mut SheetApp, ui: &mut Ui) {
+    let t = Tokens::get(ui.ctx());
+    let st = active_style(app);
+    egui::ScrollArea::horizontal().scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden).show(ui, |ui| {
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing.x = 4.0;
+            let s = vec2(28.0, 28.0);
+            if icon_button(ui, Icon::OpenFolder, t.text, "Open", s).clicked() {
+                act(app, "file.open", json!({}));
+            }
+            if icon_button(ui, Icon::Save, t.text, "Save", s).clicked() {
+                act(app, "file.save", json!({}));
+            }
+            if icon_button(ui, Icon::Print, t.text, "Print", s).clicked() {
+                app.print_now(json!({}));
+            }
+            small_sep(ui);
+            if icon_button(ui, Icon::Undo, t.text, "Undo", s).clicked() {
+                act(app, "edit.undo", json!({}));
+            }
+            if icon_button(ui, Icon::Redo, t.text, "Redo", s).clicked() {
+                act(app, "edit.redo", json!({}));
+            }
+            small_sep(ui);
+            size_combo(app, ui, &st);
+            for (icon, on, id, tip) in [
+                (Icon::Bold, st.font.bold, "home.bold", "Bold"),
+                (Icon::Italic, st.font.italic, "home.italic", "Italic"),
+                (Icon::Underline, false, "home.underline", "Underline"),
+            ] {
+                if toggle_button(ui, icon, on, tip).clicked() {
+                    act(app, id, json!({}));
+                }
+            }
+            small_sep(ui);
+            for (icon, h, id, tip) in [
+                (Icon::AlignLeft, HAlign::Left, "home.alignLeft", "Align Left"),
+                (Icon::AlignCenter, HAlign::Center, "home.alignCenter", "Center"),
+                (Icon::AlignRight, HAlign::Right, "home.alignRight", "Align Right"),
+            ] {
+                if toggle_button(ui, icon, st.align.h == h, tip).clicked() {
+                    act(app, id, json!({}));
+                }
+            }
+        });
+    });
+}
+
+/// A short vertical divider for the phone row.
+fn small_sep(ui: &mut Ui) {
+    let t = Tokens::get(ui.ctx());
+    let (r, _) = ui.allocate_exact_size(vec2(9.0, 28.0), egui::Sense::hover());
+    ui.painter().line_segment([egui::pos2(r.center().x, r.top() + 4.0), egui::pos2(r.center().x, r.bottom() - 4.0)], egui::Stroke::new(1.0, t.separator));
+}

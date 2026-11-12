@@ -33,7 +33,7 @@ use controls::{act, keytip};
 use data::data;
 use formulas::formulas;
 pub use home::FONTS;
-use home::home;
+use home::{compact, home, simple};
 use insert::{draw, insert};
 use page_layout::page_layout;
 use review::review;
@@ -41,6 +41,9 @@ pub use shortcuts::shortcut;
 pub use title_bar::{MAC_CONTENT_LEFT, MAC_TITLE_BAR, TITLE_LEFT_PAD, title_bar};
 use title_bar::{TITLE_BAR_H, TITLE_CONTROL_H};
 use view::view;
+
+/// The personal build shows only the stripped-down Home row.
+const SIMPLE: bool = true;
 
 pub const TABS: &[&str] = &["Home", "Insert", "Draw", "Page Layout", "Formulas", "Data", "Review", "View", "Automate"];
 const _: () = assert!(TITLE_CONTROL_H < TITLE_BAR_H, "title-bar controls keep a margin above and below");
@@ -52,8 +55,16 @@ pub fn show(app: &mut SheetApp, ui: &mut Ui) {
     let h = if collapsed { 34.0 } else { 34.0 + 92.0 };
     // A contextual tab exists only while its object is selected (Excel hides Table Design once the
     // cell leaves the table); a remembered one that is gone would draw an empty ribbon.
-    if CONTEXTUAL_TABS.contains(&app.ui.ribbon_tab.as_str()) && !contextual_tabs(app).contains(&app.ui.ribbon_tab.as_str()) {
+    if SIMPLE || CONTEXTUAL_TABS.contains(&app.ui.ribbon_tab.as_str()) && !contextual_tabs(app).contains(&app.ui.ribbon_tab.as_str()) {
         app.ui.ribbon_tab = "Home".to_string();
+    }
+    if SIMPLE && ui.ctx().content_rect().width() < 700.0 {
+        // Phone layout: no tab row, one scrolling row of small buttons.
+        egui::Panel::top("ribbon")
+            .exact_size(44.0)
+            .frame(egui::Frame::NONE.fill(t.window).inner_margin(egui::Margin { left: 8, right: 8, top: 4, bottom: 4 }))
+            .show(ui, |ui| compact(app, ui));
+        return;
     }
     egui::Panel::top("ribbon")
         .exact_size(h)
@@ -65,12 +76,10 @@ pub fn show(app: &mut SheetApp, ui: &mut Ui) {
                 ui.horizontal(|ui| {
                     ui.spacing_mut().item_spacing.x = 2.0;
                     ui.add_space(8.0);
-                    if app.chrome.file_tab {
-                        file_menu(app, ui);
-                    }
-                    let mut tabs: Vec<&str> = TABS.to_vec();
-                    let ctx_tabs = contextual_tabs(app);
-                    tabs.extend(ctx_tabs.iter());
+                    // Personal build: no File tab, only Home, no contextual tabs.
+                    let _ = (file_menu as fn(&mut SheetApp, &mut Ui), TABS);
+                    let tabs: Vec<&str> = vec!["Home"];
+                    let ctx_tabs: Vec<&str> = Vec::new();
                     for tab in tabs {
                         let active = app.ui.ribbon_tab == tab;
                         let contextual = ctx_tabs.contains(&tab);
@@ -144,7 +153,8 @@ pub fn show(app: &mut SheetApp, ui: &mut Ui) {
                     ui.horizontal(|ui| {
                         ui.spacing_mut().item_spacing = vec2(2.0, 2.0);
                         match app.ui.ribbon_tab.as_str() {
-                            "Home" => home(app, ui),
+                            "Home" => simple(app, ui),
+                            _ if SIMPLE => simple(app, ui),
                             "Insert" => insert(app, ui),
                             "Draw" => draw(app, ui),
                             "Page Layout" => page_layout(app, ui),
